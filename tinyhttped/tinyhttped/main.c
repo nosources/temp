@@ -10,8 +10,12 @@
 #include <stdlib.h>
 #include <netinet/in.h>
 #include <string.h>
-int startup(u_short* port);
+#include <pthread.h>
+#include <unistd.h>
 void tiny_httpd_exit(char* msg);
+int startup(u_short* port);
+void* accept_request(int client);
+int get_line(int, char *, int);
 int main(int argc, const char * argv[])
 {
     int server_sock = -1;
@@ -22,10 +26,26 @@ int main(int argc, const char * argv[])
     pthread_t newthread;
     
     server_sock = startup(&port);
-//    printf("httpd running on port %s.\n", "\xe5\x85\xb5\xe7\xa7\x8d\xe9\x80\x82\xe6\x80\xa7");
+    printf("httpd is running on port %d\n.", port);
+    
+    while (1) {
+        client_sock = accept(server_sock, (struct sockaddr*)&client_sock, &client_name_len);
+        if (-1 == client_sock) {
+            tiny_httpd_exit("accept error");
+        }
+        if (0 != pthread_create(&newthread, NULL, accept_request, client_sock)) {
+            tiny_httpd_exit("thread create error");
+        }
+        close(server_sock);
+    }
     return 0;
 }
 
+void tiny_httpd_exit(char* msg){
+    perror(msg);
+    perror("\n");
+    exit(1);
+}
 int startup(u_short* port){
     int httpd = 0;
     struct sockaddr_in name;
@@ -44,11 +64,32 @@ int startup(u_short* port){
     if (-1 == bind(httpd, (struct sockaddr*)&name, sizeof(name))){
         tiny_httpd_exit("bind error");
     }
+    if (*port == 0) {
+        int name_len = sizeof(name);
+        if (-1 == getsockname(httpd, (struct sockaddr*)&name, &name_len)) {
+            tiny_httpd_exit("get sock name error");
+        }
+        *port = ntohs(name.sin_port);
+    }
     
-    return 0;
+    if (listen(httpd, 5) < 0) {
+        tiny_httpd_exit("listen error");
+    }
+    return httpd;
 }
 
-void tiny_httpd_exit(char* msg){
-    perror(msg);
-    exit(1);
+void* accept_request(int client){
+    char buf[1024];
+    int numchars;
+    char method[255];
+    char url[255];
+    char path[512];
+    size_t i, j;
+    struct stat st;
+    int cgi = 0;
+    
+}
+
+int get_line(int sock, char * buf, int size){
+    
 }
