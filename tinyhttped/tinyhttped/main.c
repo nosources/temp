@@ -47,8 +47,8 @@ int main(int argc, const char * argv[])
         if (0 != pthread_create(&newthread, NULL, accept_request, client_sock)) {
             tiny_httpd_exit("thread create error");
         }
-        close(server_sock);
     }
+    close(server_sock);
     return 0;
 }
 
